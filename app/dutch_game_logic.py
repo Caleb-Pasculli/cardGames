@@ -56,6 +56,7 @@ def deal_cards(game: Game):
 
 def start_game(game: Game):
     game.discard_pile.append(game.deck.pop())
+    game.discard_pile[-1].is_revealed = True
     deal_cards(game)
     game.status = "playing"
 
@@ -90,6 +91,7 @@ def pick_up_from_deck(game: Game, player_id: int):
         raise Exception("Already picked up")
     
     pickedUpCard = game.deck.pop()
+    pickedUpCard.is_revealed = True
     game.picked_up_card = pickedUpCard
     return pickedUpCard
 
@@ -106,6 +108,7 @@ def pick_up_from_discard(game: Game, player_id: int):
         raise Exception("Already picked up")
     
     pickedUpCard = game.discard_pile.pop()
+    pickedUpCard.is_revealed = True
     game.picked_up_card = pickedUpCard
     return pickedUpCard
 
@@ -121,6 +124,7 @@ def discard_from_hand(player_id: int, hand_index: int, game: Game):
             hand = player.hand
     
     game.discard_pile.append(hand[hand_index])
+    game.discard_pile[-1].is_revealed = True
     hand[hand_index] = game.picked_up_card
     game.picked_up_card = None
     advance_turn(game)
@@ -132,6 +136,7 @@ def discard_pick_up_card(player_id: int, game: Game):
     turn_validation(game, player_id)
 
     game.discard_pile.append(game.picked_up_card)
+    game.discard_pile[-1].is_revealed = True
     game.picked_up_card = None
     advance_turn(game)
     return

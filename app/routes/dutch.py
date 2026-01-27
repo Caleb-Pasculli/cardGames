@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 import uuid
-
+from fastapi import Body
 from app.dutch_game_logic import *
 
 router = APIRouter(prefix="/dutch")
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/dutch")
 games: dict[str, Game] = {}
 
 @router.post("/create")
-def create_game(num_players: int):
+def create_game(num_players: int = Body(..., embed=True)):
     players = [Player(id=i, hand = []) for i in range(num_players)]
 
     game = Game(
@@ -35,7 +35,7 @@ def get_game(game_id: str):
     
     return games[game_id]
 
-@router.post("/{game_id}/pickup/deck")
+@router.post("/{game_id}/{player_id}/pickup/deck")
 def pickup_deck(game_id: str, player_id: int):
     try:
         game = games[game_id]
@@ -44,7 +44,7 @@ def pickup_deck(game_id: str, player_id: int):
     except Exception as e:
         raise HTTPException(400, str(e))
 
-@router.post("/{game_id}/pickup/discard")
+@router.post("/{game_id}/{player_id}/pickup/discard")
 def pickup_discard(game_id: str, player_id: int):
     try:
         game = games[game_id]
