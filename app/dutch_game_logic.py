@@ -9,15 +9,19 @@ class Card(BaseModel):
     is_revealed: bool = False
 
 class Player(BaseModel):
-    id: int
+    id: str
     hand: list[Card]
 
 class Game(BaseModel):
     deck: list[Card]
     discard_pile: list[Card]
     picked_up_card: Card | None = None
+
+    max_players: int = 2
     players: list[Player]
+    players_dict: dict[str, Player]
     current_turn: int = 0
+
     status: str
     dutch_called_by: int | None = None
     turns_remaining: int | None = None
@@ -51,10 +55,11 @@ def deal_cards(game: Game):
     for player in game.players:
         for i in range(4):
             player.hand.append(game.deck.pop(-1))
+        game.players_dict[player.id] = player
 
 
 
-def start_game(game: Game):
+def start_game_logic(game: Game):
     game.discard_pile.append(game.deck.pop())
     game.discard_pile[-1].is_revealed = True
     deal_cards(game)
