@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 
 DATA_DIR = Path("data")
-DATA_FILE = DATA_DIR / "issues.json"
+DATA_FILE = DATA_DIR / "games.json"
 
 
 def load_data():
@@ -11,7 +11,7 @@ def load_data():
             content = f.read()
             if content.strip():
                 return json.loads(content)
-    return [];
+    return []
 
 def save_data(data):
     DATA_DIR.mkdir(parents=True, exist_ok=True)

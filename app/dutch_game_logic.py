@@ -9,6 +9,7 @@ class Card(BaseModel):
     is_revealed: bool = False
 
 class Player(BaseModel):
+    player_number: int
     id: str
     hand: list[Card]
 
@@ -67,7 +68,7 @@ def start_game_logic(game: Game):
 
 
 
-def turn_validation(game: Game, player_id = int):
+def turn_validation(game: Game, player_id: str):
     current_player = game.players[game.current_turn]
 
     if current_player.id != player_id:
