@@ -80,7 +80,7 @@ def get_game(game_id: str, player_id: str):
     
     game = games[game_id]
 
-    opponent_hand_size = 0
+    opponent_hand_size = None
     for i in range(len(game.players)):
         if(game.players[i].id != player_id):
             opponent_hand_size = len(game.players[i].hand)
@@ -120,7 +120,7 @@ def pickup_discard(game_id: str, player_id: str):
 
 
 @router.post("/{game_id}/discard/hand")
-def discard_hand(game_id: str, player_id: str, hand_index: int):
+def discard_hand(game_id: str, player_id: str = Body(..., embed=True), hand_index: int = Body(..., embed=True)):
     try:
         game = games[game_id]
         discard_from_hand(player_id, hand_index, game)
@@ -140,7 +140,7 @@ def discard_picked(game_id: str, player_id: str = Body(..., embed=True)):
 
 
 @router.post("/{game_id}/call-dutch")
-def call_dutch_route(game_id: str, player_id: str):
+def call_dutch(game_id: str, player_id: str):
     try:
         game = games[game_id]
         call_dutch(game, player_id)
