@@ -31,7 +31,7 @@ def create_game(max_players: int = Body(..., embed=True)):
     return{
         "game_id": game_id,
         "player_id": player_id,
-        "game": game
+        "player_number": player_number
     }
 
 
@@ -45,7 +45,7 @@ def join_game(game_id: str):
 
     game = games[game_id]
 
-    player_number = len(game.players) - 1
+    player_number = len(game.players)
     player_id = str(uuid.uuid4())
     player = Player(player_number = player_number, id = player_id, hand=[])
     game.players.append(player)
@@ -55,7 +55,7 @@ def join_game(game_id: str):
     return {
         "game_id": game_id,
         "player_id": player_id,
-        "game": game
+        "player_number": player_number
     }
 
 
@@ -68,9 +68,7 @@ def start_game(game_id: str):
     
     start_game_logic(games[game_id])
 
-    return {
-        "game": games[game_id]
-    }
+    return
 
 
 @router.get("/{game_id}/{player_id}/get")
@@ -94,6 +92,7 @@ def get_game(game_id: str, player_id: str):
         "hand": game.players_dict[player_id].hand,
         "discard_pile": game.discard_pile,
         "picked_up_card": game.picked_up_card,
+        "dutch_called": game.dutch_called,
         "dutch_called_by": game.dutch_called_by,
         "turns_remaining": game.turns_remaining
     }
@@ -104,7 +103,7 @@ def pickup_deck(game_id: str, player_id: str):
     try:
         game = games[game_id]
         pick_up_from_deck(game, player_id)
-        return game
+        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -114,7 +113,7 @@ def pickup_discard(game_id: str, player_id: str):
     try:
         game = games[game_id]
         pick_up_from_discard(game, player_id)
-        return game
+        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -124,7 +123,7 @@ def discard_hand(game_id: str, player_id: str = Body(..., embed=True), hand_inde
     try:
         game = games[game_id]
         discard_from_hand(player_id, hand_index, game)
-        return game
+        return
     except Exception as e:
         raise HTTPException(400, str(e))
     
@@ -134,17 +133,18 @@ def discard_picked(game_id: str, player_id: str = Body(..., embed=True)):
     try:
         game = games[game_id]
         discard_pick_up_card(player_id, game)
-        return game
+        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
 
 @router.post("/{game_id}/call-dutch")
-def call_dutch(game_id: str, player_id: str):
+def call_dutch(game_id: str, player_id: str = Body(..., embed=True)):
     try:
         game = games[game_id]
-        call_dutch(game, player_id)
-        return game
+        print(type(list(games.keys())[0]))
+        call_dutch_logic(game, player_id)
+        return
     except Exception as e:
         raise HTTPException(400, str(e))
 

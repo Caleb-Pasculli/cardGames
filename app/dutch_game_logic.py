@@ -24,7 +24,8 @@ class Game(BaseModel):
     current_turn: int = 0
 
     status: str
-    dutch_called_by: int | None = None
+    dutch_called: bool = False
+    dutch_called_by: str | None = None
     turns_remaining: int | None = None
 
 
@@ -160,13 +161,14 @@ def advance_turn(game: Game):
 
 
 
-def call_dutch(game:Game, player_id: int):
+def call_dutch_logic(game: Game, player_id: str):
     
     turn_validation(game, player_id)
 
-    if game.dutch_called_by != None:
+    if game.dutch_called:
         raise Exception("Dutch has already been called")
     
+    game.dutch_called = True
     game.dutch_called_by = player_id
     game.turns_remaining = len(game.players)
     return
