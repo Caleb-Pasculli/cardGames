@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes.dutch import router as dutch_router
+from app.routes.dutch_routes import router as dutch_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()

@@ -13,4 +13,4 @@ class PlayerDTO(BaseModel):
 class OpponentDTO(BaseModel):
     name: str
     player_index: int
-    hand_length: int
+    hand: list[CardDTO]

@@ -41,7 +41,7 @@ class CreateGameRequest(BaseModel):
 @router.post("/create", tags=["Game Management"])
 def create_game(request: CreateGameRequest):
     try:
-        player = Player(name=request.name, player_number=0, id=str(uuid.uuid4()), hand=[])
+        player = Player(name=request.name, player_number=0, id=str(uuid.uuid4()), hand=[], opponents_hands=[])
 
         game = Game(
             deck=create_deck(),
@@ -89,7 +89,7 @@ def create_game(request: CreateGameRequest):
 
 @router.post("/{game_id}/join", tags=["Game Management"])
 def join_game(game_id: str, name: str = Body(..., embed=True)):
-    try:
+
         if game_id not in games:
             raise HTTPException(404, "Game not found")
         if games[game_id].status != "waiting":
@@ -100,22 +100,36 @@ def join_game(game_id: str, name: str = Body(..., embed=True)):
         game = games[game_id]
 
         player = Player(
-            name=name, player_number=len(game.players), id=str(uuid.uuid4()), hand=[]
+            name=name, player_number=len(game.players), id=str(uuid.uuid4()), hand=[], opponents_hands=[]
         )
-        game.players.append(player)
-        game.players_dict[player.id] = player
 
+        for existing_player in game.players:
+            player.opponents_hands.append([])
+            existing_player.opponents_hands.append([])
+        
         opponents = []
-        for opponent in game.players:
+        opponent_index = 0
+        for i, opponent in enumerate(game.players):
             if opponent.id == player.id:
                 continue
+
+            opponent_hand = []
+            for card in player.opponents_hands[opponent_index]:
+                if card.is_revealed:
+                    opponent_hand.append(CardDTO(suit=card.suit, rank=card.rank))
+                else:
+                    opponent_hand.append(CardDTO(suit=None, rank=None))
 
             opponent_dto = OpponentDTO(
                 name=opponent.name,
                 player_index=opponent.player_number,
-                hand_length=len(opponent.hand),
+                hand=opponent_hand,
             )
             opponents.append(opponent_dto)
+            opponent_index += 1
+            
+        game.players.append(player)
+        game.players_dict[player.id] = player
 
         game_state = GameDTO(
             game_id=game_id,
@@ -143,8 +157,6 @@ def join_game(game_id: str, name: str = Body(..., embed=True)):
 
         return game_state
     
-    except Exception as e:
-        raise HTTPException(400, str(e))
 
 
 @router.post("/{game_id}/{player_id}/start", tags=["Game Management"])
@@ -165,7 +177,7 @@ def start_game(game_id: str, player_id: str):
 
 @router.get("/{game_id}/{player_id}/get", tags=["Game Management"])
 def get_game(game_id: str, player_id: str):
-    try:
+
         if game_id not in games:
             raise HTTPException(404, "Game not found")
 
@@ -196,16 +208,25 @@ def get_game(game_id: str, player_id: str):
         )
 
         opponents = []
-        for opponent in game.players:
+        opponent_index = 0
+        for i, opponent in enumerate(game.players):
             if opponent.id == player_id:
                 continue
+
+            opponent_hand = []
+            for card in player.opponents_hands[opponent_index]:
+                if card.is_revealed:
+                    opponent_hand.append(CardDTO(suit=card.suit, rank=card.rank))
+                else:
+                    opponent_hand.append(CardDTO(suit=None, rank=None))
 
             opponent_dto = OpponentDTO(
                 name=opponent.name,
                 player_index=opponent.player_number,
-                hand_length=len(opponent.hand),
+                hand=opponent_hand,
             )
             opponents.append(opponent_dto)
+            opponent_index += 1
 
         if len(game.discard_pile) > 0:
             top_of_discard = CardDTO.model_validate(game.discard_pile[-1].model_dump())
@@ -237,8 +258,6 @@ def get_game(game_id: str, player_id: str):
         )
         return game_state
 
-    except Exception as e:
-        raise HTTPException(400, str(e))
 
 
 @router.post("/{game_id}/{player_id}/pickup/deck", tags=["Pick Up"])
@@ -246,7 +265,6 @@ def pickup_deck(game_id: str, player_id: str):
     try:
         game = games[game_id]
         pick_up_from_deck(game, player_id)
-        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -256,7 +274,6 @@ def pickup_discard(game_id: str, player_id: str):
     try:
         game = games[game_id]
         pick_up_from_discard(game, player_id)
-        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -270,7 +287,6 @@ def discard_hand(
     try:
         game = games[game_id]
         discard_from_hand(player_id, hand_index, game)
-        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -280,7 +296,6 @@ def discard_picked(game_id: str, player_id: str):
     try:
         game = games[game_id]
         discard_pick_up_card(player_id, game)
-        return
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -288,11 +303,10 @@ def discard_picked(game_id: str, player_id: str):
 @router.post("/{game_id}/{player_id}/special/10", tags=["Special Card"])
 def used_10(game_id: str, player_id: str, target_id: int = Body(..., embed=True)):
     game = games[game_id]
-    try:
-        play_10(game, player_id, target_id)
-        return
-    except Exception as e:
-        raise HTTPException(400, str(e))
+    # try:
+    play_10(game, player_id, target_id)
+    # except Exception as e:
+    #     raise HTTPException(400, str(e))
 
 
 @router.post("/{game_id}/{player_id}/special/jack", tags=["Special Card"])
@@ -304,9 +318,7 @@ def jack_additional_info(
 ):
     try:
         game = games[game_id]
-        card = jack_played(player_index, card_index, player_id, game)
-        card = card.model_dump()
-        return CardDTO.model_validate(card)
+        jack_played(player_index, card_index, player_id, game)
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -322,9 +334,7 @@ def queen_additional_info(
 ):
     try:
         game = games[game_id]
-        return queen_played(
-            player1_index, card1_index, player2_index, card2_index, game, player_id
-        )
+        queen_played(player1_index, card1_index, player2_index, card2_index, game, player_id)
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -342,7 +352,7 @@ def end_jack_viewing(game_id: str, player_id: str):
 def match_card(game_id: str, player_id: str, card_index: int = Body(..., embed=True)):
     try:
         game = games[game_id]
-        return match(game, player_id, card_index)
+        match(game, player_id, card_index)
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -352,7 +362,6 @@ def call_dutch(game_id: str, player_id: str):
     try:
         game = games[game_id]
         call_dutch_logic(game, player_id)
-        return
     except Exception as e:
         raise HTTPException(400, str(e))
 

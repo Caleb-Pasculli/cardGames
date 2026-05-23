@@ -21,6 +21,7 @@ class Player(BaseModel):
     picked_up_from_discard: bool = False
     can_pickup: bool = True
     can_discard: bool = False
+    opponents_hands: list[list[Card]]
 
 
 class Game(BaseModel):
@@ -97,9 +98,14 @@ def deal_cards(game: Game):
     for player in game.players:
         for i in range(2):
             player.hand.append(game.deck.pop(-1))
+
         for i in range(2):
             player.hand.append(game.deck.pop(-1))
             player.hand[-1].is_revealed = True
+
+        for i in range(len(game.players) - 1):
+            player.opponents_hands[i] = [Card(), Card(), Card(), Card()]
+        
         game.players_dict[player.id] = player
 
 
@@ -142,8 +148,6 @@ def pick_up_from_deck(game: Game, player_id: str):
 
     if pickedUpCard.rank == "10":
         game.special_card_played = "10"
-
-    
 
     game.last_action = LastActionDTO(
         action_type=GameActionsEnum.PICKUP_DECK,
@@ -202,12 +206,21 @@ def play_10(game: Game, player_id: str, target_player_index: int):
 
     player.picked_up_card = None
 
+    for other_player in game.players:
+        if other_player.id == target_player.id:
+            continue
+
+        if target_player_index > player.player_number:
+            target_player_index -= 1
+
+        other_player.opponents_hands[target_player_index].append(Card())
+
     game.last_action = LastActionDTO(
         action_type=GameActionsEnum.TEN_ADD,
         player_id=player.player_number,
         player_name=player.name,
         target_player_1=target_player.player_number,
-        target_card_index_1=len(target_player.hand),
+        target_card_index_1=len(target_player.hand) - 1,
     )
     game.action_count += 1
 
@@ -317,6 +330,12 @@ def jack_played(player_index: int, card_index: int, player_id: str, game: Game):
 
     revealed_card = target_player.hand[card_index].model_copy()
     revealed_card.is_revealed = True
+
+    if player_index == player.player_number:
+        player.hand[card_index] = revealed_card
+    else:
+        player.opponents_hands[player_index][card_index] = revealed_card
+
     game.jack_viewed = True
 
     game.last_action = LastActionDTO(
@@ -327,8 +346,6 @@ def jack_played(player_index: int, card_index: int, player_id: str, game: Game):
         target_card_index_1=card_index,
     )
     game.action_count += 1
-
-    return revealed_card
 
 
 def end_viewing(player_id: str, game: Game):
@@ -400,6 +417,16 @@ def match(game: Game, player_id: str, card_index: int):
     if current_player.hand[card_index].rank != game.discard_pile[-1].rank:
         current_player.hand.append(game.deck.pop())
 
+        target_player_index = current_player.player_number
+        for other_player in game.players:
+            if other_player.id == current_player.id:
+                continue
+            
+            if target_player_index > other_player.player_number:
+                target_player_index -= 1
+
+            other_player.opponents_hands[target_player_index].append(Card())
+
         game.last_action = LastActionDTO(
             action_type=GameActionsEnum.WRONG_MATCH,
             player_id=current_player.player_number,
@@ -414,6 +441,16 @@ def match(game: Game, player_id: str, card_index: int):
     game.discard_pile.append(current_player.hand.pop(card_index))
     game.discard_pile[-1].is_revealed = True
     game.can_match = False
+
+    target_player_index = current_player.player_number
+    for other_player in game.players:
+        if other_player.id == current_player.id:
+            continue
+        
+        if target_player_index > other_player.player_number:
+            target_player_index -= 1
+
+        other_player.opponents_hands[target_player_index].pop()
 
     game.last_action = LastActionDTO(
         action_type=GameActionsEnum.CORRECT_MATCH,
@@ -440,6 +477,13 @@ def advance_turn(game: Game):
     for player in game.players:
         player.can_pickup = True
         player.can_discard = False
+
+        player_number = 0
+        for opponent in game.players:
+            if opponent.id == player.id:
+                continue
+            player.opponents_hands[player_number] = [Card() for _ in opponent.hand]
+            player_number += 1
 
     game.can_match = True
     game.current_turn = (game.current_turn + 1) % len(game.players)
